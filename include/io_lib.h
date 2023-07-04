@@ -13,6 +13,7 @@ typedef std::vector<PrintOptions> PrintOptionList;
 class IOLib {
     private:
         std::string _buffor;
+        std::string _bufforTmp;
         // second = true guarantees vector.size() = 1
         bool _asyncMode;
         std::size_t _isInputPrinted;
@@ -63,11 +64,22 @@ class IOLib {
     public:
         IOLib();
         ~IOLib();
-        void AsyncMode(std::string = "> ");
-        void DisableAsyncMode();
-        std::size_t InputCount() const noexcept;
         /**
-         * @param silent
+         * Turns on asynchronous input
+         * @param CommandPrompt default: "> "
+        */
+        void AsyncMode(std::string = "> ");
+        /**
+         * Turns off asynchronous input
+        */
+        void DisableAsyncMode();
+        /**
+         * Inputs ready to fetch count
+        */
+        std::size_t InputCount() const noexcept;
+        std::size_t TotalInputCount() const noexcept;
+        /**
+         * @param silent if input should be printed during fetching
         */
         std::string GetLastInput(bool = false) noexcept;
         bool isInAsyncMode() const noexcept;

@@ -4,7 +4,7 @@
 IOLib io;
 
 IOLib::IOLib() : _killOutput(false), _asyncMode(false), _outputEnabled(true), _isInputPrinted(false), _buffor(""), _carretPos(0), _inputHistorySize(-1),
-    _isIterValid(false), _inputScrollIter(_inputs.end()), _insertMode(false) {
+    _isIterValid(false), _inputScrollIter(_inputs.end()), _insertMode(false), _bufforTmp("") {
     _outputThread = new std::thread(OutputThread(), this);
 }
 
@@ -47,6 +47,7 @@ void IOLib::InputEnterHandler() {
     _inputs.push_back(_buffor);
     DeleteInputField();
     _buffor = "";
+    _bufforTmp = "";
     _carretPos = 0;
     UpdateInputField();
     _inputScrollIter = _inputs.end();
@@ -59,6 +60,7 @@ void IOLib::HandleInput(const Event &obj) {
         case 'H':
             // Println("Up Arrow");
             if(_inputScrollIter == _inputs.begin()) break;
+            if(_inputScrollIter == _inputs.end()) _bufforTmp = _buffor;
             _inputScrollIter--;
             _buffor = *_inputScrollIter;
             _carretPos = _buffor.size();
@@ -67,7 +69,7 @@ void IOLib::HandleInput(const Event &obj) {
         case 'P':
             // Println("Down Arrow");
             if(_inputScrollIter == _inputs.end()) break;
-            if(++_inputScrollIter == _inputs.end()) _buffor = "";
+            if(++_inputScrollIter == _inputs.end()) _buffor = _bufforTmp;
             else _buffor = *_inputScrollIter;
             _carretPos = _buffor.size();
             UpdateInputField();
@@ -182,6 +184,7 @@ void IOLib::AsyncMode(std::string commandPrompt) {
 }
 
 void IOLib::DisableAsyncMode() {
+    if(!_asyncMode) return;
     _asyncMode = false;
     _inputThread->join();
     delete _inputThread;
@@ -190,6 +193,10 @@ void IOLib::DisableAsyncMode() {
 
 std::size_t IOLib::InputCount() const noexcept {
     return _inputs.size() - _inputFetched;
+}
+
+std::size_t IOLib::TotalInputCount() const noexcept {
+    return _inputs.size();
 }
 
 std::string IOLib::GetLastInput(bool silent) noexcept {
