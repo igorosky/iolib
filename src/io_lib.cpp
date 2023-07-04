@@ -4,7 +4,7 @@
 IOLib io;
 
 IOLib::IOLib() : _killOutput(false), _asyncMode(false), _outputEnabled(true), _isInputPrinted(false), _buffor(""), _carretPos(0), _inputHistorySize(-1),
-    _isIterValid(false), _inputScrollIter(_inputs.end()) {
+    _isIterValid(false), _inputScrollIter(_inputs.end()), _insertMode(false) {
     _outputThread = new std::thread(OutputThread(), this);
 }
 
@@ -84,6 +84,27 @@ void IOLib::HandleInput(const Event &obj) {
             _carretPos--;
             std::cout<<'\b';
             break;
+        case 82:
+            _insertMode = !_insertMode;
+            // Println(std::string("Insert mode ") + (_insertMode ? "ON" : "OFF"));
+            break;
+        case 71:
+            // Println("Home");
+            while(_carretPos) {
+                std::cout<<'\b';
+                _carretPos--;
+            }
+            break;
+        case 83:
+            // Println("Delete");
+            _buffor.erase(_carretPos, 1);
+            UpdateInputField(false, _carretPos);
+            break;
+        case 79:
+            // Println("End");
+            _carretPos = _buffor.size();
+            UpdateInputField(false);
+            break;
         }
         return;
     }
@@ -100,11 +121,16 @@ void IOLib::HandleInput(const Event &obj) {
         InputEnterHandler();
         break;
     case 127:
+            // Println("Deletev2");
         break;
     default:
         if(c >= 32) {
-            _buffor.insert(_carretPos++, std::string(1, c));
             std::cout<<(char)c;
+            if(_insertMode) {
+                _buffor[_carretPos++] = c;
+                break;
+            }
+            _buffor.insert(_carretPos++, std::string(1, c));
             UpdateInputField(false, _carretPos);
         }
     }
@@ -211,7 +237,6 @@ void IOLib::_print(const std::vector<Event> &print) const {
         std::cout<<output;
     }
 }
-
 
 void IOLib::setCommandPrompt(const std::string cp) {
     _commandPrompt = {{str: cp}};

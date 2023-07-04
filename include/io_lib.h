@@ -25,6 +25,7 @@ class IOLib {
         bool _isIterValid;
         std::list<std::string>::iterator _inputFetchIter;
         std::list<std::string>::iterator _inputScrollIter;
+        bool _insertMode;
 
         struct InputThread {
             void operator()(IOLib*);
