@@ -1,3 +1,4 @@
+// Author: Igor Zaworski
 #ifndef IO_LIB
     #define IO_LIB
 
@@ -14,9 +15,9 @@ class IOLib {
     private:
         std::string _buffor;
         std::string _bufforTmp;
-        // second = true guarantees vector.size() = 1
         bool _asyncMode;
         std::size_t _isInputPrinted;
+        bool _isPromptPrinted;
         bool _outputEnabled;
         bool _killOutput;
         std::size_t _carretPos;
@@ -31,7 +32,7 @@ class IOLib {
         struct InputThread {
             void operator()(IOLib*);
         };
-        // friend InputThread;
+
         std::thread *_inputThread;
 
         struct OutputThread {
@@ -39,25 +40,31 @@ class IOLib {
         };
         std::thread *_outputThread;
 
+        enum EventType {
+            PRINT = 0,
+            INPUT = 1,
+            SPECIAL_INPUT = 2,
+            COMMAND_PRINT = 3,
+            SHOW_CARRET = 4,
+        };
+
         struct Event {
             std::string str = "";
-            PrintOptionList args = {};
             int input = 0;
-            bool specialInput = false;
+            EventType eventType = PRINT;
         };
-        std::list<std::pair<std::vector<Event>, int>> _output;
-        std::vector<Event> _commandPrompt;
+        std::list<Event> _output;
+        std::string _commandPrompt;
 
         void _print(const std::string&, const PrintOptionList&);
         void _print(const std::string&, const unsigned short, va_list);
         void InputEnterHandler();
-        void _print(const std::vector<Event>&) const;
         /**
          * @param whole
          * @param from if not whole
         */
         void UpdateInputField(bool = true, const std::size_t = 0);
-        void DeleteInputField();
+        void DeleteInputField(const bool = true, const std::size_t from = 0);
         void HandleInput(const Event&);
         bool isOuputEnabled() const noexcept;
         bool toKillOutput() const noexcept;
@@ -83,8 +90,10 @@ class IOLib {
         */
         std::string GetLastInput(bool = false) noexcept;
         bool isInAsyncMode() const noexcept;
-        void setCommandPrompt(const std::string);
+        void setCommandPrompt(const std::string) noexcept;
         std::string getCommandPrompt() const noexcept;
+
+        static std::string CombineStr(const std::string, const PrintOptionList = {});
         
         #pragma region Prints
 
@@ -349,6 +358,9 @@ class IOLib {
         #pragma endregion
 };
 
-extern IOLib io;
+#ifndef IO_LIB_NO_GLOBAL_IO
+    #define IO_LIB_GLOBAL_IO
+    extern IOLib io;
+#endif
 
 #endif

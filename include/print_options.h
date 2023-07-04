@@ -1,3 +1,5 @@
+// Author: Igor Zaworski
+
 enum PrintOptions {
     RESET = 0,
     BOLD = 1,

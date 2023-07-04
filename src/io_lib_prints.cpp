@@ -1,12 +1,12 @@
+// Author: Igor Zaworski
 #include <iostream>
 #include "../include/io_lib.h"
 
 
 void IOLib::_print(const std::string& str, const PrintOptionList &args) {
-    _output.push_back({{{
-        str: str,
-        args: args,
-    }}, 0});
+    _output.push_back({
+        str: CombineStr(str, args),
+    });
 }
 
 void IOLib::_print(const std::string& str, const unsigned short count, va_list args) {

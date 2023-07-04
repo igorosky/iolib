@@ -1,10 +1,13 @@
+// Author: Igor Zaworski
 #include <conio.h>
 #include "../include/io_lib.h"
 
-IOLib io;
+#ifdef IO_LIB_GLOBAL_IO
+    IOLib io;
+#endif
 
-IOLib::IOLib() : _killOutput(false), _asyncMode(false), _outputEnabled(true), _isInputPrinted(false), _buffor(""), _carretPos(0), _inputHistorySize(-1),
-    _isIterValid(false), _inputScrollIter(_inputs.end()), _insertMode(false), _bufforTmp("") {
+IOLib::IOLib() : _buffor(""), _bufforTmp(""), _asyncMode(false), _isInputPrinted(0), _isPromptPrinted(false), _outputEnabled(true), _killOutput(false),
+    _carretPos(0), _inputHistorySize(-1), _inputFetched(0), _isIterValid(false), _insertMode(false), _commandPrompt("") {
     _outputThread = new std::thread(OutputThread(), this);
 }
 
@@ -15,27 +18,35 @@ IOLib::~IOLib() {
     delete _outputThread;
 }
 
-void IOLib::DeleteInputField() {
-    if(!_isInputPrinted)
+void IOLib::DeleteInputField(const bool withPrompt, const std::size_t from) {
+    if((!_isInputPrinted && !_isPromptPrinted) || from > _carretPos)
         return;
-    std::cout<<'\r';
-    for(int i = 0; i <= _isInputPrinted; i++) std::cout<<' ';
-    std::cout<<'\r';
-    _isInputPrinted = 0;
+    if(withPrompt) {
+        std::cout<<'\r';
+        for(std::size_t i = 0; i <= _isInputPrinted; i++) std::cout<<' ';
+        std::cout<<'\r';
+        _isPromptPrinted = false;
+        _isInputPrinted = 0;
+        return;
+    }
+    for(std::size_t i = _carretPos; i < _buffor.size(); i++) std::cout<<' ';
+    for(std::size_t i = _carretPos; i < _buffor.size(); i++) std::cout<<'\b';
+    for(std::size_t i = _carretPos; i > from; i--) std::cout<<"\b \b";
+    _isInputPrinted = from;
 }
 
 void IOLib::UpdateInputField(bool whole, const std::size_t from) {
-    whole |= !_isInputPrinted;
+    whole |= !_isPromptPrinted;
     if(whole) {
         DeleteInputField();
-        _print(_commandPrompt);
-        std::cout<<_buffor;
+        std::cout<<_commandPrompt<<_buffor;
+        _isPromptPrinted = true;
     }
     else if(from < _buffor.size()) {
         std::cout<<_buffor.substr(from, _buffor.size());
     }
     std::cout<<" \b";
-    _isInputPrinted = _buffor.size() + _commandPrompt.size();
+    _isInputPrinted = _buffor.size();
     for(std::size_t i = 0; i < _buffor.size() - _carretPos; i++) std::cout<<'\b';
 }
 
@@ -55,7 +66,7 @@ void IOLib::InputEnterHandler() {
 
 void IOLib::HandleInput(const Event &obj) {
     const auto &c = obj.input;
-    if(obj.specialInput) {
+    if(obj.eventType == SPECIAL_INPUT) {
         switch(c) {
         case 'H':
             // Println("Up Arrow");
@@ -104,8 +115,9 @@ void IOLib::HandleInput(const Event &obj) {
             break;
         case 79:
             // Println("End");
+            const auto tmp = _carretPos;
             _carretPos = _buffor.size();
-            UpdateInputField(false);
+            UpdateInputField(false, tmp);
             break;
         }
         return;
@@ -141,42 +153,55 @@ void IOLib::HandleInput(const Event &obj) {
 void IOLib::OutputThread::operator()(IOLib *io) {
     while(!io->toKillOutput()) {
         if(io->isOuputEnabled() && io->_output.size()) {
-            const auto o = io->_output.front();
+            auto o = io->_output.front();
             io->_output.pop_front();
-            if(o.second == 1) {
-                io->HandleInput(o.first[0]);
-                continue;
+            switch (o.eventType)
+            {
+            case SHOW_CARRET:
+                if(io->_isPromptPrinted) break;
+                std::cout<<io->_commandPrompt;
+                io->_isPromptPrinted = true;
+                break;
+            case SPECIAL_INPUT:
+            case INPUT:
+                io->HandleInput(o);
+                break;
+            case COMMAND_PRINT:
+                o.str = io->_commandPrompt + o.str;
+            case PRINT:
+                io->DeleteInputField();
+                std::cout<<o.str;
+                std::cout<<"\r\n";
+                io->UpdateInputField();
+                break;
+            default:
+                break;
             }
-            io->DeleteInputField();
-            if(o.second == 2)
-                io->_print(io->_commandPrompt);
-            io->_print(o.first);
-            std::cout<<"\r\n";
-            io->UpdateInputField();
         }
     }
 }
 
 void IOLib::InputThread::operator()(IOLib *io) {
+    io->_output.push_back({
+        eventType: SHOW_CARRET,
+    });
     while(io->isInAsyncMode())
         if(kbhit()) {
             auto inp = getch();
-            bool special = false;
+            EventType type = INPUT;
             if(inp == 224) {
                 inp = getch();
-                special = true;
+                type = SPECIAL_INPUT;
             }
-            io->_output.push_back({{{
+            io->_output.push_back({
                 input: inp,
-                specialInput: special,
-            }}, 1});
+                eventType: type,
+            });
         }
 }
 
 void IOLib::AsyncMode(std::string commandPrompt) {
-    _commandPrompt = {{
-        str: commandPrompt,
-    }};
+    _commandPrompt = commandPrompt;
     _buffor = "";
     _carretPos = 0;
     _asyncMode = true;
@@ -211,9 +236,10 @@ std::string IOLib::GetLastInput(bool silent) noexcept {
     auto ans = *_inputFetchIter;
     _inputFetched++;
     if(!silent)
-        _output.push_back({{{
+        _output.push_back({
             str: ans,
-        }}, 2});
+            eventType: COMMAND_PRINT,
+        });
     return ans;
 }
 
@@ -229,31 +255,22 @@ bool IOLib::toKillOutput() const noexcept {
     return _killOutput;
 }
 
-void IOLib::_print(const std::vector<Event> &print) const {
-    for(int h = 0; h < print.size(); h++) {
-        const auto& str = print[h].str;
-        const auto& args = print[h].args;
-        std::string output = "";
-        if(args.size()) {
-            output = "\033[";
-            for(int i = 0; i < args.size(); i++)
-                output += ';' + std::to_string(args[i]);
-            output += "m";
-        }
-        output += str + "\033[0m";
-        std::cout<<output;
-    }
-}
-
-void IOLib::setCommandPrompt(const std::string cp) {
-    _commandPrompt = {{str: cp}};
-    UpdateInputField();
+void IOLib::setCommandPrompt(const std::string commandPrompt) noexcept {
+    _commandPrompt = commandPrompt;
 }
 
 std::string IOLib::getCommandPrompt() const noexcept {
-    std::string ans = "";
-    for(const auto& i : _commandPrompt) {
-        ans += i.str;
+    return _commandPrompt;
+}
+
+std::string IOLib::CombineStr(const std::string str, const PrintOptionList args) {
+    std::string output = "";
+    if(args.size()) {
+        output = "\033[";
+        for(std::size_t i = 0; i < args.size(); i++)
+            output += ';' + std::to_string(args[i]);
+        output += "m";
     }
-    return ans;
+    output += str + "\033[0m";
+    return output;
 }
