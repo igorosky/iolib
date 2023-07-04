@@ -12,16 +12,24 @@ typedef std::vector<PrintOptions> PrintOptionList;
 
 class IOLib {
     private:
+        std::string _buffor;
+        // second = true guarantees vector.size() = 1
         bool _asyncMode;
-        bool _isInputPrinted;
+        std::size_t _isInputPrinted;
         bool _outputEnabled;
         bool _killOutput;
+        std::size_t _carretPos;
         std::list<std::string> _inputs;
+        std::size_t _inputHistorySize;
+        std::size_t _inputFetched;
+        bool _isIterValid;
+        std::list<std::string>::iterator _inputFetchIter;
+        std::list<std::string>::iterator _inputScrollIter;
 
         struct InputThread {
             void operator()(IOLib*);
         };
-        friend InputThread;
+        // friend InputThread;
         std::thread *_inputThread;
 
         struct OutputThread {
@@ -29,21 +37,26 @@ class IOLib {
         };
         std::thread *_outputThread;
 
-        struct PrintObj {
+        struct Event {
             std::string str = "";
             PrintOptionList args = {};
             int input = 0;
+            bool specialInput = false;
         };
+        std::list<std::pair<std::vector<Event>, int>> _output;
+        std::vector<Event> _commandPrompt;
 
         void _print(const std::string&, const PrintOptionList&);
         void _print(const std::string&, const unsigned short, va_list);
-    protected:
-        std::string _buffor;
-        std::list<std::pair<std::vector<PrintObj>, int>> _output;
-        std::vector<PrintObj> _commandPrompt;
-        void _print(const std::vector<PrintObj>&) const;
-        void UpdateInputField();
+        void InputEnterHandler();
+        void _print(const std::vector<Event>&) const;
+        /**
+         * @param whole
+         * @param from if not whole
+        */
+        void UpdateInputField(bool = true, const std::size_t = 0);
         void DeleteInputField();
+        void HandleInput(const Event&);
         bool isOuputEnabled() const noexcept;
         bool toKillOutput() const noexcept;
     public:
@@ -57,6 +70,8 @@ class IOLib {
         */
         std::string GetLastInput(bool = false) noexcept;
         bool isInAsyncMode() const noexcept;
+        void setCommandPrompt(const std::string);
+        std::string getCommandPrompt() const noexcept;
         
         #pragma region Prints
 

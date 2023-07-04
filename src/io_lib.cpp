@@ -3,7 +3,8 @@
 
 IOLib io;
 
-IOLib::IOLib() : _killOutput(false), _asyncMode(false), _outputEnabled(true), _isInputPrinted(false), _buffor("") {
+IOLib::IOLib() : _killOutput(false), _asyncMode(false), _outputEnabled(true), _isInputPrinted(false), _buffor(""), _carretPos(0), _inputHistorySize(-1),
+    _isIterValid(false), _inputScrollIter(_inputs.end()) {
     _outputThread = new std::thread(OutputThread(), this);
 }
 
@@ -17,17 +18,96 @@ IOLib::~IOLib() {
 void IOLib::DeleteInputField() {
     if(!_isInputPrinted)
         return;
-    _isInputPrinted = false;
     std::cout<<'\r';
-    for(int i = 0; i <= _buffor.size() + _commandPrompt.size(); i++) std::cout<<' ';
+    for(int i = 0; i <= _isInputPrinted; i++) std::cout<<' ';
     std::cout<<'\r';
+    _isInputPrinted = 0;
 }
 
-void IOLib::UpdateInputField() {
+void IOLib::UpdateInputField(bool whole, const std::size_t from) {
+    whole |= !_isInputPrinted;
+    if(whole) {
+        DeleteInputField();
+        _print(_commandPrompt);
+        std::cout<<_buffor;
+    }
+    else if(from < _buffor.size()) {
+        std::cout<<_buffor.substr(from, _buffor.size());
+    }
+    std::cout<<" \b";
+    _isInputPrinted = _buffor.size() + _commandPrompt.size();
+    for(std::size_t i = 0; i < _buffor.size() - _carretPos; i++) std::cout<<'\b';
+}
+
+void IOLib::InputEnterHandler() {
+    if(_inputs.size() == _inputHistorySize) {
+        _isIterValid = !(!_isIterValid || _inputs.begin() == _inputFetchIter);
+        _inputs.pop_front();
+    }
+    _inputs.push_back(_buffor);
     DeleteInputField();
-    _print(_commandPrompt);
-    std::cout<<_buffor;
-    _isInputPrinted = true;
+    _buffor = "";
+    _carretPos = 0;
+    UpdateInputField();
+    _inputScrollIter = _inputs.end();
+}
+
+void IOLib::HandleInput(const Event &obj) {
+    const auto &c = obj.input;
+    if(obj.specialInput) {
+        switch(c) {
+        case 'H':
+            // Println("Up Arrow");
+            if(_inputScrollIter == _inputs.begin()) break;
+            _inputScrollIter--;
+            _buffor = *_inputScrollIter;
+            _carretPos = _buffor.size();
+            UpdateInputField();
+            break;
+        case 'P':
+            // Println("Down Arrow");
+            if(_inputScrollIter == _inputs.end()) break;
+            if(++_inputScrollIter == _inputs.end()) _buffor = "";
+            else _buffor = *_inputScrollIter;
+            _carretPos = _buffor.size();
+            UpdateInputField();
+            break;
+        case 'M':
+            // Println("Right Arrow");
+            if(_carretPos < _buffor.size()) {
+                std::cout<<_buffor[_carretPos];
+                _carretPos++;
+            }
+            break;
+        case 'K':
+            // Println("Left Arrow");
+            _carretPos--;
+            std::cout<<'\b';
+            break;
+        }
+        return;
+    }
+    
+    switch(c) {
+    case 8:
+        if(_carretPos) {
+            _buffor.erase(--_carretPos, 1);
+            std::cout<<'\b';
+            UpdateInputField(false, _carretPos);
+        }
+        break;
+    case 13:
+        InputEnterHandler();
+        break;
+    case 127:
+        break;
+    default:
+        if(c >= 32) {
+            _buffor.insert(_carretPos++, std::string(1, c));
+            std::cout<<(char)c;
+            UpdateInputField(false, _carretPos);
+        }
+    }
 }
 
 void IOLib::OutputThread::operator()(IOLib *io) {
@@ -36,28 +116,7 @@ void IOLib::OutputThread::operator()(IOLib *io) {
             const auto o = io->_output.front();
             io->_output.pop_front();
             if(o.second == 1) {
-                const auto &c = o.first[0].input;
-                switch(c) {
-                    case 8:
-                        if(io->_buffor.size()) {
-                            io->_buffor.pop_back();
-                            std::cout<<"\b \b";
-                        }
-                        break;
-                    case 13:
-                        io->_inputs.push_back(io->_buffor);
-                        io->DeleteInputField();
-                        io->_buffor = "";
-                        io->UpdateInputField();
-                        break;
-                    case 127:
-                        break;
-                    default:
-                        if(c >= 32) {
-                            io->_buffor.push_back(c);
-                            std::cout<<(char)c;
-                        }
-                }
+                io->HandleInput(o.first[0]);
                 continue;
             }
             io->DeleteInputField();
@@ -72,8 +131,18 @@ void IOLib::OutputThread::operator()(IOLib *io) {
 
 void IOLib::InputThread::operator()(IOLib *io) {
     while(io->isInAsyncMode())
-        if(_kbhit())
-            io->_output.push_back({{{input: _getch()}}, 1});
+        if(kbhit()) {
+            auto inp = getch();
+            bool special = false;
+            if(inp == 224) {
+                inp = getch();
+                special = true;
+            }
+            io->_output.push_back({{{
+                input: inp,
+                specialInput: special,
+            }}, 1});
+        }
 }
 
 void IOLib::AsyncMode(std::string commandPrompt) {
@@ -81,6 +150,7 @@ void IOLib::AsyncMode(std::string commandPrompt) {
         str: commandPrompt,
     }};
     _buffor = "";
+    _carretPos = 0;
     _asyncMode = true;
     _inputThread = new std::thread(InputThread(), this);
 }
@@ -93,14 +163,20 @@ void IOLib::DisableAsyncMode() {
 }
 
 std::size_t IOLib::InputCount() const noexcept {
-    return _inputs.size();
+    return _inputs.size() - _inputFetched;
 }
 
 std::string IOLib::GetLastInput(bool silent) noexcept {
-    if(_inputs.empty())
+    if(!InputCount())
         return "";
-    auto ans = _inputs.front();
-    _inputs.pop_front();
+    if(!_isIterValid) {
+        _isIterValid = true;
+        _inputFetchIter = _inputs.begin();
+    }
+    else
+        _inputFetchIter++;
+    auto ans = *_inputFetchIter;
+    _inputFetched++;
     if(!silent)
         _output.push_back({{{
             str: ans,
@@ -120,7 +196,7 @@ bool IOLib::toKillOutput() const noexcept {
     return _killOutput;
 }
 
-void IOLib::_print(const std::vector<PrintObj> &print) const {
+void IOLib::_print(const std::vector<Event> &print) const {
     for(int h = 0; h < print.size(); h++) {
         const auto& str = print[h].str;
         const auto& args = print[h].args;
@@ -134,4 +210,18 @@ void IOLib::_print(const std::vector<PrintObj> &print) const {
         output += str + "\033[0m";
         std::cout<<output;
     }
+}
+
+
+void IOLib::setCommandPrompt(const std::string cp) {
+    _commandPrompt = {{str: cp}};
+    UpdateInputField();
+}
+
+std::string IOLib::getCommandPrompt() const noexcept {
+    std::string ans = "";
+    for(const auto& i : _commandPrompt) {
+        ans += i.str;
+    }
+    return ans;
 }
