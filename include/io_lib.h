@@ -13,13 +13,13 @@ typedef std::vector<PrintOptions> PrintOptionList;
 
 class IOLib {
     private:
+        bool _activated;
         std::string _buffor;
         std::string _bufforTmp;
         bool _asyncMode;
         std::size_t _isInputPrinted;
         bool _isPromptPrinted;
         bool _outputEnabled;
-        bool _killOutput;
         std::size_t _carretPos;
         std::list<std::string> _inputs;
         std::size_t _inputHistorySize;
@@ -66,11 +66,14 @@ class IOLib {
         void UpdateInputField(bool = true, const std::size_t = 0);
         void DeleteInputField(const bool = true, const std::size_t from = 0);
         void HandleInput(const Event&);
-        bool isOuputEnabled() const noexcept;
-        bool toKillOutput() const noexcept;
     public:
         IOLib();
         ~IOLib();
+        void Activate();
+        /**
+         * @param waitForProcessEnd
+        */
+        void Deactivate(bool = true);
         /**
          * Turns on asynchronous input
          * @param CommandPrompt default: "> "
@@ -78,8 +81,9 @@ class IOLib {
         void AsyncMode(std::string = "> ");
         /**
          * Turns off asynchronous input
+         * @param waitForProcessEnd
         */
-        void DisableAsyncMode();
+        void DisableAsyncMode(bool = true);
         /**
          * Inputs ready to fetch count
         */
@@ -94,6 +98,7 @@ class IOLib {
         std::string getCommandPrompt() const noexcept;
 
         static std::string CombineStr(const std::string, const PrintOptionList = {});
+        bool isOuputEnabled() const noexcept;
         
         #pragma region Prints
 

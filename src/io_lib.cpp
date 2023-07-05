@@ -6,15 +6,25 @@
     IOLib io;
 #endif
 
-IOLib::IOLib() : _buffor(""), _bufforTmp(""), _asyncMode(false), _isInputPrinted(0), _isPromptPrinted(false), _outputEnabled(true), _killOutput(false),
-    _carretPos(0), _inputHistorySize(-1), _inputFetched(0), _isIterValid(false), _insertMode(false), _commandPrompt("") {
-    _outputThread = new std::thread(OutputThread(), this);
-}
+IOLib::IOLib() : _activated(false), _buffor(""), _bufforTmp(""), _asyncMode(false), _isInputPrinted(0), _isPromptPrinted(false), _outputEnabled(true),
+    _carretPos(0), _inputHistorySize(-1), _inputFetched(0), _isIterValid(false), _insertMode(false), _commandPrompt("") { }
 
 IOLib::~IOLib() {
-    DisableAsyncMode();
-    _killOutput = true;
-    _outputThread->join();
+    Deactivate();
+}
+
+void IOLib::Activate() {
+    if(_activated) return;
+    _outputThread = new std::thread(OutputThread(), this);
+    _activated = true;
+}
+
+void IOLib::Deactivate(bool waitForProcessEnd) {
+    if(!_activated) return;
+    _activated = false;
+    DisableAsyncMode(waitForProcessEnd);
+    if(waitForProcessEnd)
+        _outputThread->join();
     delete _outputThread;
 }
 
@@ -151,10 +161,12 @@ void IOLib::HandleInput(const Event &obj) {
 }
 
 void IOLib::OutputThread::operator()(IOLib *io) {
-    while(!io->toKillOutput()) {
+    while(io->_activated) {
         if(io->isOuputEnabled() && io->_output.size()) {
             auto o = io->_output.front();
             io->_output.pop_front();
+            if(o.eventType && !io->_asyncMode)
+                continue;
             switch (o.eventType)
             {
             case SHOW_CARRET:
@@ -189,7 +201,7 @@ void IOLib::InputThread::operator()(IOLib *io) {
         if(kbhit()) {
             auto inp = getch();
             EventType type = INPUT;
-            if(inp == 224) {
+            if(inp == 224 || !inp) {
                 inp = getch();
                 type = SPECIAL_INPUT;
             }
@@ -208,10 +220,11 @@ void IOLib::AsyncMode(std::string commandPrompt) {
     _inputThread = new std::thread(InputThread(), this);
 }
 
-void IOLib::DisableAsyncMode() {
+void IOLib::DisableAsyncMode(bool waitForProcessEnd) {
     if(!_asyncMode) return;
     _asyncMode = false;
-    _inputThread->join();
+    if(waitForProcessEnd)
+        _inputThread->join();
     delete _inputThread;
     DeleteInputField();
 }
@@ -249,10 +262,6 @@ bool IOLib::isInAsyncMode() const noexcept {
 
 bool IOLib::isOuputEnabled() const noexcept {
     return _outputEnabled;
-}
-
-bool IOLib::toKillOutput() const noexcept {
-    return _killOutput;
 }
 
 void IOLib::setCommandPrompt(const std::string commandPrompt) noexcept {
