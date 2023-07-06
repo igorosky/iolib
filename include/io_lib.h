@@ -26,6 +26,10 @@ class IOLib {
         std::list<std::string>::iterator _inputFetchIter;
         std::list<std::string>::iterator _inputScrollIter;
         bool _insertMode;
+        // unsigned long long _bufforState;
+        // std::string _targetBuffor;
+        // std::size_t _targetCarretPos;
+        // unsigned long long _targetBufforState;
 
         struct InputThread {
             void operator()(IOLib*);
@@ -49,6 +53,7 @@ class IOLib {
             std::string str = "";
             int input = 0;
             EventType eventType = PRINT;
+            unsigned long long state;
         };
         std::list<Event> _events;
         void HandleEvent(const Event&);
@@ -82,6 +87,9 @@ class IOLib {
         void InputDownArrowHandler();
         void InputRightArrowHandler();
         void InputLeftArrowHandler();
+
+        // void UpdateTargetBuffor(const char&, const EventType&);
+        // void InputTargetEnterHandler();
     public:
         static unsigned short decimalPrecision;
         IOLib();

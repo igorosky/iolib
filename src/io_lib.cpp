@@ -15,7 +15,10 @@ IOLib::~IOLib() {
 
 void IOLib::PrintInputField() {
     if(!_asyncMode) return;
-    std::cout<<_commandPrompt<<_buffor;
+    std::cout<<_commandPrompt<<_buffor;//_targetBuffor;
+    // _buffor = _targetBuffor;
+    // _carretPos = _targetCarretPos;
+    // _bufforState = _targetBufforState;
     SetCarretToCorrectSpot();
     _isPromptPrinted = true;
 }
@@ -65,40 +68,39 @@ void IOLib::HandleInput(const char &c) {
 
 void IOLib::HandleSpecialInput(const char &c) {
     switch(c) {
-        case 'H':
-            // Println("Up Arrow");
-            InputUpArrowHandler();
-            break;
-        case 'P':
-            // Println("Down Arrow");
-            InputDownArrowHandler();
-            break;
-        case 'M':
-            // Println("Right Arrow");
-            InputRightArrowHandler();
-            break;
-        case 'K':
-            // Println("Left Arrow");
-            InputLeftArrowHandler();
-            break;
-        case 82:
-            // Println("Insert");
-            InputInsertHandler();
-            break;
-        case 71:
-            // Println("Home");
-            InputHomeHandler();
-            break;
-        case 83:
-            // Println("Delete");
-            InputDeleteHandler();
-            break;
-        case 79:
-            // Println("End");
-            InputEndHandler();
-            break;
-        }
-        return;
+    case 'H':
+        // Println("Up Arrow");
+        InputUpArrowHandler();
+        break;
+    case 'P':
+        // Println("Down Arrow");
+        InputDownArrowHandler();
+        break;
+    case 'M':
+        // Println("Right Arrow");
+        InputRightArrowHandler();
+        break;
+    case 'K':
+        // Println("Left Arrow");
+        InputLeftArrowHandler();
+        break;
+    case 82:
+        // Println("Insert");
+        InputInsertHandler();
+        break;
+    case 71:
+        // Println("Home");
+        InputHomeHandler();
+        break;
+    case 83:
+        // Println("Delete");
+        InputDeleteHandler();
+        break;
+    case 79:
+        // Println("End");
+        InputEndHandler();
+        break;
+    }
 }
 
 void IOLib::HandleEvent(const Event &event) {
@@ -147,14 +149,88 @@ void IOLib::InputThread::operator()(IOLib *io) {
             inp = getch();
             type = SPECIAL_INPUT;
         }
-        io->_events.push_back({
-            input: inp,
-            eventType: type,
-        });
+        // io->UpdateTargetBuffor(inp, type);
     }
 }
 
+// void IOLib::UpdateTargetBuffor(const char &c, const EventType &type) {
+//     if(type == INPUT) {
+//         switch(c) {
+//         case 8:     //Backspace
+//             _targetBuffor.erase(--_targetCarretPos, 1);
+//             break;
+//         case 13:    //Enter
+//             InputTargetEnterHandler();
+//             break;
+//         case 127:
+//                 // Println("Deletev2");
+//             break;
+//         default:
+//             if(c >= 32) _targetBuffor.insert(_targetCarretPos++, std::string(1, c));
+//         }
+//         return;
+//     }
+//     else if(type != SPECIAL_INPUT) throw "Not an input";
+//     _events.push_back({
+//         input: c,
+//         eventType: type,
+//         state: ++_targetBufforState,
+//     });
+//     switch(c) {
+//     case 'H':
+//         // Println("Up Arrow");
+//         InputUpArrowHandler();
+//         break;
+//     case 'P':
+//         // Println("Down Arrow");
+//         InputDownArrowHandler();
+//         break;
+//     case 'M':
+//         // Println("Right Arrow");
+//         InputRightArrowHandler();
+//         break;
+//     case 'K':
+//         // Println("Left Arrow");
+//         InputLeftArrowHandler();
+//         break;
+//     case 82:
+//         // Println("Insert");
+//         InputInsertHandler();
+//         break;
+//     case 71:
+//         // Println("Home");
+//         _targetCarretPos = 0;
+//         break;
+//     case 83:
+//         // Println("Delete");
+//         _targetBuffor.erase(_targetCarretPos, 1);
+//         break;
+//     case 79:
+//         // Println("End");
+//         _targetCarretPos = _targetBuffor.size();
+//         break;
+//     }
+// }
+
+// void IOLib::InputTargetEnterHandler() {
+//     if(_inputs.size() == _inputHistorySize) {
+//         _isIterValid = !(!_isIterValid || _inputs.begin() == _inputFetchIter);
+//         _inputs.pop_front();
+//     }
+//     _inputs.push_back(_targetBuffor);
+//     _buffor = "";
+//     _bufforTmp = "";
+//     _targetBuffor = "";
+//     _carretPos = 0;
+//     _targetCarretPos = 0;
+//     _inputScrollIter = _inputs.end();
+// }
+
 void IOLib::AsyncMode(std::string commandPrompt) {
+    // _bufforState = 0;
+    // _targetBuffor = "";
+    // _targetCarretPos = 0;
+    // _targetBufforState = 0;
     _outputThread = new std::thread(OutputThread(), this);
     _commandPrompt = commandPrompt;
     _buffor = "";
@@ -261,6 +337,7 @@ void IOLib::InputEnterHandler() {
     _bufforTmp = "";
     _carretPos = 0;
     _inputScrollIter = _inputs.end();
+    PrintInputField();
 }
 
 void IOLib::InputNewCharHandler(const char &c) {
