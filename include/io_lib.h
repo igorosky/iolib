@@ -6,7 +6,6 @@
 #include <vector>
 #include <list>
 #include <thread>
-#include <cstdarg>
 #include "print_options.h"
 
 typedef std::vector<PrintOptions> PrintOptionList;
@@ -16,8 +15,8 @@ class IOLib {
         bool _activated;
         std::string _buffor;
         std::string _bufforTmp;
+        std::string _commandPrompt;
         bool _asyncMode;
-        std::size_t _isInputPrinted;
         bool _isPromptPrinted;
         bool _outputEnabled;
         std::size_t _carretPos;
@@ -32,7 +31,6 @@ class IOLib {
         struct InputThread {
             void operator()(IOLib*);
         };
-
         std::thread *_inputThread;
 
         struct OutputThread {
@@ -53,24 +51,47 @@ class IOLib {
             int input = 0;
             EventType eventType = PRINT;
         };
-        std::list<Event> _output;
-        std::string _commandPrompt;
-
-        void _print(const std::string&, const PrintOptionList&);
-        void _print(const std::string&, const unsigned short, va_list);
-        void InputEnterHandler();
+        std::list<Event> _events;
+        void HandleEvent(const Event&);
+        
+       /**
+        * Prints input field with Command Prompt, with buffor and sets cursor to correct spot
+       */
+        void PrintInputField();
         /**
-         * @param whole
-         * @param from if not whole
+         * Deletes input field with Command Prompt
         */
-        void UpdateInputField(bool = true, const std::size_t = 0);
-        void DeleteInputField(const bool = true, const std::size_t from = 0);
-        void HandleInput(const Event&);
+        void DeleteInputField() const;
+        void PrintOutput(const std::string&);
+        void CommadPrint(const std::string &str);
+        void ShowCarret();
+        void HandleInput(const char&);
+        void HandleSpecialInput(const char&);
+        /**
+         * Sets carret to _carretPos (its must be at the end of buffor)
+        */
+        void SetCarretToCorrectSpot() const noexcept;
+        void SwapBufforTo(const std::string);
+        void InputNewCharHandler(const char&);
+        void InputEnterHandler();
+        void InputBackSpaceHandler();
+        void InputEndHandler();
+        void InputHomeHandler();
+        void InputInsertHandler();
+        void InputDeleteHandler();
+        void InputUpArrowHandler();
+        void InputDownArrowHandler();
+        void InputRightArrowHandler();
+        void InputLeftArrowHandler();
     public:
         IOLib();
         ~IOLib();
+        /**
+         * Allows io to be used
+        */
         void Activate();
         /**
+         * Disables io if Async is enabled is is also diasable
          * @param waitForProcessEnd
         */
         void Deactivate(bool = true);
@@ -97,275 +118,46 @@ class IOLib {
         void setCommandPrompt(const std::string) noexcept;
         std::string getCommandPrompt() const noexcept;
 
-        static std::string CombineStr(const std::string, const PrintOptionList = {});
+        template <typename T>
+        inline static std::string CombineStr(T str, const PrintOptionList args = {}) {
+            std::string output = "";
+            if(args.size()) {
+                output = "\033[";
+                for(std::size_t i = 0; i < args.size(); i++)
+                    output += ';' + std::to_string(args[i]);
+                output += "m";
+            }
+            output += toString(str) + "\033[0m";
+            return output;
+        }
+
         bool isOuputEnabled() const noexcept;
-        
-        #pragma region Prints
 
-        /**
-         * Go to new line
-        */
-        void Println();
-
-        /**
-         * Prints str and goes to new line
-         * @param str value to print
-         * @param n options count
-         * @param options n options of printing
-        */
-        void Println(const std::string, const unsigned short = 0, ...);
+        template <typename T>
+        static std::string toString(T);
+        // template <typename Y, template <typename> class T>
+        // static std::string toString(T<Y>);
+        // template <typename Y, typename U, template <typename, typename> class T>
+        // std::string toString(T<Y, U>);
 
         /**
          * Prints str and goes to new line
          * @param str value to print
          * @param options options of printing
         */
-        void Println(const std::string, const PrintOptionList);
-
-
-
-        /**
-         * Prints str and goes to new line
-         * @param str value to print
-         * @param n options count
-         * @param options n options of printing
-        */
-        void Println(const char, const unsigned short = 0, ...);
-
-        /**
-         * Prints str and goes to new line
-         * @param str value to print
-         * @param options options of printing
-        */
-        void Println(const char, const PrintOptionList);
-
-
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param n options count
-        //  * @param options n options of printing
-        // */
-        // void Println(const unsigned char, const unsigned short = 0, ...);
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param options options of printing
-        // */
-        // void Println(const unsigned char, const PrintOptionList);
-
-
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param n options count
-        //  * @param options n options of printing
-        // */
-        // void Println(const unsigned short, const unsigned short = 0, ...);
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param options options of printing
-        // */
-        // void Println(const unsigned short, const PrintOptionList);
-
-
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param n options count
-        //  * @param options n options of printing
-        // */
-        // void Println(const short, const unsigned short = 0, ...);
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param options options of printing
-        // */
-        // void Println(const short, const PrintOptionList);
-
-
-
-        /**
-         * Prints str and goes to new line
-         * @param str value to print
-         * @param n options count
-         * @param options n options of printing
-        */
-        void Println(const int, const unsigned short = 0, ...);
-
-        /**
-         * Prints str and goes to new line
-         * @param str value to print
-         * @param options options of printing
-        */
-        void Println(const int, const PrintOptionList);
-
-
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param n options count
-        //  * @param options n options of printing
-        // */
-        // void Println(const unsigned int, const unsigned short = 0, ...);
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param options options of printing
-        // */
-        // void Println(const unsigned int, const PrintOptionList);
-
-
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param n options count
-        //  * @param options n options of printing
-        // */
-        // void Println(const long, const unsigned short = 0, ...);
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param options options of printing
-        // */
-        // void Println(const long, const PrintOptionList);
-
-
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param n options count
-        //  * @param options n options of printing
-        // */
-        // void Println(const unsigned long, const unsigned short = 0, ...);
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param options options of printing
-        // */
-        // void Println(const unsigned long, const PrintOptionList);
-
-
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param n options count
-        //  * @param options n options of printing
-        // */
-        // void Println(const long long, const unsigned short = 0, ...);
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param options options of printing
-        // */
-        // void Println(const long long, const PrintOptionList);
-
-
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param n options count
-        //  * @param options n options of printing
-        // */
-        // void Println(const unsigned long long, const unsigned short = 0, ...);
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param options options of printing
-        // */
-        // void Println(const unsigned long long, const PrintOptionList);
-
-
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param n options count
-        //  * @param options n options of printing
-        // */
-        // void Println(const float, const unsigned short = 0, ...);
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param options options of printing
-        // */
-        // void Println(const float, const PrintOptionList);
-
-
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param n options count
-        //  * @param options n options of printing
-        // */
-        // void Println(const double, const unsigned short = 0, ...);
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param options options of printing
-        // */
-        // void Println(const double, const PrintOptionList);
-
-
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param n options count
-        //  * @param options n options of printing
-        // */
-        // void Println(const long double, const unsigned short = 0, ...);
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param options options of printing
-        // */
-        // void Println(const long double, const PrintOptionList);
-
-
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param n options count
-        //  * @param options n options of printing
-        // */
-        // void Println(const bool, const unsigned short = 0, ...);
-
-        // /**
-        //  * Prints str and goes to new line
-        //  * @param str value to print
-        //  * @param options options of printing
-        // */
-        // void Println(const bool, const PrintOptionList);
-
-        #pragma endregion
+        template <typename T = std::string>
+        inline void Println(T str = "", const PrintOptionList args = {}) {
+            _events.push_back({
+                str: CombineStr(str, args),
+            });
+        }
 };
 
 #ifndef IO_LIB_NO_GLOBAL_IO
     #define IO_LIB_GLOBAL_IO
     extern IOLib io;
 #endif
+
+#define p IOLib::CombineStr
 
 #endif

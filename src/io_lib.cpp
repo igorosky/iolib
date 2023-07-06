@@ -6,8 +6,8 @@
     IOLib io;
 #endif
 
-IOLib::IOLib() : _activated(false), _buffor(""), _bufforTmp(""), _asyncMode(false), _isInputPrinted(0), _isPromptPrinted(false), _outputEnabled(true),
-    _carretPos(0), _inputHistorySize(-1), _inputFetched(0), _isIterValid(false), _insertMode(false), _commandPrompt("") { }
+IOLib::IOLib() : _activated(false), _buffor(""), _bufforTmp(""), _commandPrompt(""), _asyncMode(false), _isPromptPrinted(false),
+    _outputEnabled(true), _carretPos(0), _inputHistorySize(-1), _inputFetched(0), _isIterValid(false), _insertMode(false) { }
 
 IOLib::~IOLib() {
     Deactivate();
@@ -28,188 +28,147 @@ void IOLib::Deactivate(bool waitForProcessEnd) {
     delete _outputThread;
 }
 
-void IOLib::DeleteInputField(const bool withPrompt, const std::size_t from) {
-    if((!_isInputPrinted && !_isPromptPrinted) || from > _carretPos)
-        return;
-    if(withPrompt) {
-        std::cout<<'\r';
-        for(std::size_t i = 0; i <= _isInputPrinted; i++) std::cout<<' ';
-        std::cout<<'\r';
-        _isPromptPrinted = false;
-        _isInputPrinted = 0;
-        return;
-    }
-    for(std::size_t i = _carretPos; i < _buffor.size(); i++) std::cout<<' ';
-    for(std::size_t i = _carretPos; i < _buffor.size(); i++) std::cout<<'\b';
-    for(std::size_t i = _carretPos; i > from; i--) std::cout<<"\b \b";
-    _isInputPrinted = from;
+void IOLib::PrintInputField() {
+    std::cout<<_commandPrompt<<_buffor;
+    SetCarretToCorrectSpot();
+    _isPromptPrinted = true;
 }
 
-void IOLib::UpdateInputField(bool whole, const std::size_t from) {
-    whole |= !_isPromptPrinted;
-    if(whole) {
+void IOLib::DeleteInputField() const {
+    std::cout<<'\r';
+    for(std::size_t i = 0; i < _buffor.size() + _commandPrompt.size(); i++) std::cout<<' ';
+    std::cout<<'\r';
+}
+
+void IOLib::PrintOutput(const std::string &str) {
+    if(!_outputEnabled) return;
+    if(_asyncMode)
         DeleteInputField();
-        std::cout<<_commandPrompt<<_buffor;
-        _isPromptPrinted = true;
-    }
-    else if(from < _buffor.size()) {
-        std::cout<<_buffor.substr(from, _buffor.size());
-    }
-    std::cout<<" \b";
-    _isInputPrinted = _buffor.size();
-    for(std::size_t i = 0; i < _buffor.size() - _carretPos; i++) std::cout<<'\b';
+    std::cout<<str;
+    std::cout<<"\r\n";
+    if(_asyncMode)
+        PrintInputField();
 }
 
-void IOLib::InputEnterHandler() {
-    if(_inputs.size() == _inputHistorySize) {
-        _isIterValid = !(!_isIterValid || _inputs.begin() == _inputFetchIter);
-        _inputs.pop_front();
-    }
-    _inputs.push_back(_buffor);
-    DeleteInputField();
-    _buffor = "";
-    _bufforTmp = "";
-    _carretPos = 0;
-    UpdateInputField();
-    _inputScrollIter = _inputs.end();
+void IOLib::CommadPrint(const std::string &str) { 
+    if(!_outputEnabled) return;
+    if(_asyncMode)
+        DeleteInputField();
+    std::cout<<_commandPrompt<<str<<"\n\r";
+    if(_asyncMode)
+        PrintInputField();
 }
 
-void IOLib::HandleInput(const Event &obj) {
-    const auto &c = obj.input;
-    if(obj.eventType == SPECIAL_INPUT) {
-        switch(c) {
-        case 'H':
-            // Println("Up Arrow");
-            if(_inputScrollIter == _inputs.begin()) break;
-            if(_inputScrollIter == _inputs.end()) _bufforTmp = _buffor;
-            _inputScrollIter--;
-            _buffor = *_inputScrollIter;
-            _carretPos = _buffor.size();
-            UpdateInputField();
-            break;
-        case 'P':
-            // Println("Down Arrow");
-            if(_inputScrollIter == _inputs.end()) break;
-            if(++_inputScrollIter == _inputs.end()) _buffor = _bufforTmp;
-            else _buffor = *_inputScrollIter;
-            _carretPos = _buffor.size();
-            UpdateInputField();
-            break;
-        case 'M':
-            // Println("Right Arrow");
-            if(_carretPos < _buffor.size()) {
-                std::cout<<_buffor[_carretPos];
-                _carretPos++;
-            }
-            break;
-        case 'K':
-            // Println("Left Arrow");
-            _carretPos--;
-            std::cout<<'\b';
-            break;
-        case 82:
-            _insertMode = !_insertMode;
-            // Println(std::string("Insert mode ") + (_insertMode ? "ON" : "OFF"));
-            break;
-        case 71:
-            // Println("Home");
-            while(_carretPos) {
-                std::cout<<'\b';
-                _carretPos--;
-            }
-            break;
-        case 83:
-            // Println("Delete");
-            _buffor.erase(_carretPos, 1);
-            UpdateInputField(false, _carretPos);
-            break;
-        case 79:
-            // Println("End");
-            const auto tmp = _carretPos;
-            _carretPos = _buffor.size();
-            UpdateInputField(false, tmp);
-            break;
-        }
-        return;
-    }
-    
+void IOLib::ShowCarret() {
+    if(_isPromptPrinted) return;
+    std::cout<<_commandPrompt;
+    _isPromptPrinted = true;
+}
+
+void IOLib::HandleInput(const char &c) {
     switch(c) {
-    case 8:
-        if(_carretPos) {
-            _buffor.erase(--_carretPos, 1);
-            std::cout<<'\b';
-            UpdateInputField(false, _carretPos);
-        }
+    case 8:     //Backspace
+        InputBackSpaceHandler();
         break;
-    case 13:
+    case 13:    //Enter
         InputEnterHandler();
         break;
     case 127:
             // Println("Deletev2");
         break;
     default:
-        if(c >= 32) {
-            std::cout<<(char)c;
-            if(_insertMode) {
-                _buffor[_carretPos++] = c;
-                break;
-            }
-            _buffor.insert(_carretPos++, std::string(1, c));
-            UpdateInputField(false, _carretPos);
+        if(c >= 32) InputNewCharHandler(c);
+    }
+}
+
+void IOLib::HandleSpecialInput(const char &c) {
+    switch(c) {
+        case 'H':
+            // Println("Up Arrow");
+            InputUpArrowHandler();
+            break;
+        case 'P':
+            // Println("Down Arrow");
+            InputDownArrowHandler();
+            break;
+        case 'M':
+            // Println("Right Arrow");
+            InputRightArrowHandler();
+            break;
+        case 'K':
+            // Println("Left Arrow");
+            InputLeftArrowHandler();
+            break;
+        case 82:
+            // Println("Insert");
+            InputInsertHandler();
+            break;
+        case 71:
+            // Println("Home");
+            InputHomeHandler();
+            break;
+        case 83:
+            // Println("Delete");
+            InputDeleteHandler();
+            break;
+        case 79:
+            // Println("End");
+            InputEndHandler();
+            break;
         }
+        return;
+}
+
+void IOLib::HandleEvent(const Event &event) {
+    if(event.eventType && !_asyncMode) return;
+    switch (event.eventType)
+    {
+    case SHOW_CARRET:
+        ShowCarret();
+        break;
+    case SPECIAL_INPUT:
+        HandleSpecialInput(event.input);
+        break;
+    case INPUT:
+        HandleInput(event.input);
+        break;
+    case COMMAND_PRINT:
+        CommadPrint(event.str);
+        break;
+    case PRINT:
+        PrintOutput(event.str);
+        break;
+    default:
+        break;
     }
 }
 
 void IOLib::OutputThread::operator()(IOLib *io) {
     while(io->_activated) {
-        if(io->isOuputEnabled() && io->_output.size()) {
-            auto o = io->_output.front();
-            io->_output.pop_front();
-            if(o.eventType && !io->_asyncMode)
-                continue;
-            switch (o.eventType)
-            {
-            case SHOW_CARRET:
-                if(io->_isPromptPrinted) break;
-                std::cout<<io->_commandPrompt;
-                io->_isPromptPrinted = true;
-                break;
-            case SPECIAL_INPUT:
-            case INPUT:
-                io->HandleInput(o);
-                break;
-            case COMMAND_PRINT:
-                o.str = io->_commandPrompt + o.str;
-            case PRINT:
-                io->DeleteInputField();
-                std::cout<<o.str;
-                std::cout<<"\r\n";
-                io->UpdateInputField();
-                break;
-            default:
-                break;
-            }
-        }
+        if(io->_events.empty()) continue;
+        auto o = io->_events.front();
+        io->_events.pop_front();
+        io->HandleEvent(o);
     }
 }
 
 void IOLib::InputThread::operator()(IOLib *io) {
-    io->_output.push_back({
+    io->_events.push_back({
         eventType: SHOW_CARRET,
     });
-    while(io->isInAsyncMode())
-        if(kbhit()) {
-            auto inp = getch();
-            EventType type = INPUT;
-            if(inp == 224 || !inp) {
-                inp = getch();
-                type = SPECIAL_INPUT;
-            }
-            io->_output.push_back({
-                input: inp,
-                eventType: type,
-            });
+    while(io->isInAsyncMode()) {
+        if(!kbhit()) continue;
+        auto inp = getch();
+        EventType type = INPUT;
+        if(inp == 224 || !inp) {
+            inp = getch();
+            type = SPECIAL_INPUT;
         }
+        io->_events.push_back({
+            input: inp,
+            eventType: type,
+        });
+    }
 }
 
 void IOLib::AsyncMode(std::string commandPrompt) {
@@ -249,7 +208,7 @@ std::string IOLib::GetLastInput(bool silent) noexcept {
     auto ans = *_inputFetchIter;
     _inputFetched++;
     if(!silent)
-        _output.push_back({
+        _events.push_back({
             str: ans,
             eventType: COMMAND_PRINT,
         });
@@ -272,14 +231,90 @@ std::string IOLib::getCommandPrompt() const noexcept {
     return _commandPrompt;
 }
 
-std::string IOLib::CombineStr(const std::string str, const PrintOptionList args) {
-    std::string output = "";
-    if(args.size()) {
-        output = "\033[";
-        for(std::size_t i = 0; i < args.size(); i++)
-            output += ';' + std::to_string(args[i]);
-        output += "m";
+void IOLib::SetCarretToCorrectSpot() const noexcept {
+    for(std::size_t i = _buffor.size(); i > _carretPos; i--) std::cout<<'\b';
+}
+
+void IOLib::SwapBufforTo(const std::string newBuffor) {
+    std::cout<<'\r'<<_commandPrompt<<newBuffor;
+    _carretPos = newBuffor.size();
+    for(std::size_t i = _carretPos; i < _buffor.size(); i++) std::cout<<' ';
+    for(std::size_t i = _carretPos; i < _buffor.size(); i++) std::cout<<'\b';
+    _buffor = newBuffor;
+}
+
+void IOLib::InputEnterHandler() {
+    if(_inputs.size() == _inputHistorySize) {
+        _isIterValid = !(!_isIterValid || _inputs.begin() == _inputFetchIter);
+        _inputs.pop_front();
     }
-    output += str + "\033[0m";
-    return output;
+    _inputs.push_back(_buffor);
+    DeleteInputField();
+    _buffor = "";
+    _bufforTmp = "";
+    _carretPos = 0;
+    _inputScrollIter = _inputs.end();
+}
+
+void IOLib::InputNewCharHandler(const char &c) {
+    std::cout<<(char)c;
+    if(_insertMode) {
+        _buffor[_carretPos++] = c;
+        return;
+    }
+    _buffor.insert(_carretPos++, std::string(1, c));
+    std::cout<<_buffor.substr(_carretPos, _buffor.size() - _carretPos);
+    SetCarretToCorrectSpot();
+}
+
+void IOLib::InputBackSpaceHandler() {
+    if(!_carretPos) return;
+    _buffor.erase(--_carretPos, 1);
+    std::cout<<'\b'<<_buffor.substr(_carretPos, _buffor.size() - _carretPos)<<" \b";
+    SetCarretToCorrectSpot();
+}
+
+void IOLib::InputEndHandler() {
+    std::cout<<_buffor.substr(_carretPos, _buffor.size() - _carretPos);
+    _carretPos = _buffor.size();
+}
+
+void IOLib::InputHomeHandler() {
+    _carretPos = 0;
+    std::cout<<'\r'<<_commandPrompt;
+}
+
+void IOLib::InputInsertHandler() {
+    // Println(std::string("Insert mode ") + (_insertMode ? "ON" : "OFF"));
+    _insertMode = !_insertMode;
+}
+
+void IOLib::InputDeleteHandler() {
+    _buffor.erase(_carretPos, 1);
+    std::cout<<_buffor.substr(_carretPos, _buffor.size() - _carretPos)<<" \b";
+    SetCarretToCorrectSpot();
+}
+
+void IOLib::InputUpArrowHandler() {
+    if(_inputScrollIter == _inputs.begin()) return;
+    if(_inputScrollIter-- == _inputs.end()) _bufforTmp = _buffor;
+    SwapBufforTo(*_inputScrollIter);
+}
+
+void IOLib::InputDownArrowHandler() {
+    if(_inputScrollIter == _inputs.end()) return;
+    std::string newBuffor = _bufforTmp;
+    if(++_inputScrollIter != _inputs.end()) newBuffor = *_inputScrollIter;
+    SwapBufforTo(newBuffor);
+}
+
+void IOLib::InputRightArrowHandler() {
+    if(_carretPos >= _buffor.size()) return;
+    std::cout<<_buffor[_carretPos];
+    _carretPos++;
+}
+
+void IOLib::InputLeftArrowHandler() {
+    _carretPos--;
+    std::cout<<'\b';
 }

@@ -2,67 +2,95 @@
 #include <iostream>
 #include "../include/io_lib.h"
 
-
-void IOLib::_print(const std::string& str, const PrintOptionList &args) {
-    _output.push_back({
-        str: CombineStr(str, args),
-    });
+template<>
+std::string IOLib::toString(const std::string str) {
+    return str;
 }
 
-void IOLib::_print(const std::string& str, const unsigned short count, va_list args) {
-    PrintOptionList params;
-    for(int i = 0; i < count; i++) 
-        params.push_back((PrintOptions)va_arg(args, int));
-    _print(str, params);
+template<>
+std::string IOLib::toString(const char* str) {
+    return std::string(str);
 }
 
-void IOLib::Println() {
-    _print("\r\n", {});
+template<>
+std::string IOLib::toString(const double str) {
+    return std::to_string(str);
 }
 
-
-
-void IOLib::Println(const std::string str, const unsigned short count, ...) {
-    va_list args;
-    va_start(args, count);
-    _print(str, count, args);
-    va_end(args);
-    
+template<>
+std::string IOLib::toString(const float str) {
+    return std::to_string(str);
 }
 
-void IOLib::Println(const std::string str, const PrintOptionList args) {
-    _print(str, args);
-    
+template<>
+std::string IOLib::toString(const unsigned char str) {
+    return std::string(1, str);
 }
 
-
-
-void IOLib::Println(const char str, const unsigned short count, ...) {
-    va_list args;
-    va_start(args, count);
-    const std::string c = std::string(1, str);
-    _print(c, count, args);
-    va_end(args);
-    
+template<>
+std::string IOLib::toString(const char str) {
+    return std::string(1, str);
 }
 
-void IOLib::Println(const char str, const PrintOptionList args) {
-    _print(std::string(1, str), args);
-    
+template<>
+std::string IOLib::toString(const unsigned short str) {
+    return std::to_string(str);
 }
 
-
-
-void IOLib::Println(const int str, const unsigned short count, ...) {
-    va_list args;
-    va_start(args, count);
-    const std::string c = std::to_string(str);
-    _print(c, count, args);
-    va_end(args);
-    
+template<>
+std::string IOLib::toString(const short str) {
+    return std::to_string(str);
 }
 
-void IOLib::Println(const int str, const PrintOptionList args) {
-    _print(std::to_string(str), args);
-    
+template<>
+std::string IOLib::toString(const unsigned int str) {
+    return std::to_string(str);
 }
+
+template<>
+std::string IOLib::toString(const int str) {
+    return std::to_string(str);
+}
+
+template<>
+std::string IOLib::toString(const unsigned long str) {
+    return std::to_string(str);
+}
+
+template<>
+std::string IOLib::toString(const long str) {
+    return std::to_string(str);
+}
+
+template<>
+std::string IOLib::toString(const unsigned long long str) {
+    return std::to_string(str);
+}
+
+template<>
+std::string IOLib::toString(const long long str) {
+    return std::to_string(str);
+}
+
+template<>
+std::string IOLib::toString(const bool str) {
+    return str ? "true" : "false";
+}
+
+// template <typename Y, typename U>
+// std::string IOLib::toString<Y, U, std::pair<Y, U>>(std::pair<Y, U> pair) {
+//     return "(" + toString(pair.first) + ", " + totring(pair.second) + ")";
+// }
+
+// template <typename Y, typename U>
+// std::string IOLib::toString<Y, U, std::vector<Y, U>>(std::vector<Y, U> vec) {
+//     std::string ans = "[ ";
+//     std::string comma = "";
+//     for(const auto& i : vec) {
+//         ans += comma;
+//         ans += toString(i);
+//         comma = ", ";
+//     }
+//     ans += " ]"
+//     return ans;
+// }
