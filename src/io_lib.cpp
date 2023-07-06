@@ -149,6 +149,11 @@ void IOLib::InputThread::operator()(IOLib *io) {
             inp = getch();
             type = SPECIAL_INPUT;
         }
+        io->_events.push_back({
+            input: inp,
+            eventType: type,
+            // state: ++_targetBufforState,
+        });
         // io->UpdateTargetBuffor(inp, type);
     }
 }

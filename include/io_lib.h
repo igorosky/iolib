@@ -53,7 +53,7 @@ class IOLib {
             std::string str = "";
             int input = 0;
             EventType eventType = PRINT;
-            unsigned long long state;
+            // unsigned long long state;
         };
         std::list<Event> _events;
         void HandleEvent(const Event&);
