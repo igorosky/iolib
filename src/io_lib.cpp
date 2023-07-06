@@ -2,39 +2,26 @@
 #include <conio.h>
 #include "../include/io_lib.h"
 
-#ifdef IO_LIB_GLOBAL_IO
-    IOLib io;
-#endif
+IOLib io;
 
-IOLib::IOLib() : _activated(false), _buffor(""), _bufforTmp(""), _commandPrompt(""), _asyncMode(false), _isPromptPrinted(false),
-    _outputEnabled(true), _carretPos(0), _inputHistorySize(-1), _inputFetched(0), _isIterValid(false), _insertMode(false) { }
+unsigned short IOLib::decimalPrecision = 2;
+
+IOLib::IOLib() : _buffor(""), _bufforTmp(""), _commandPrompt(""), _asyncMode(false), _isPromptPrinted(false), _outputEnabled(true), _carretPos(0),
+    _inputHistorySize(-1), _inputFetched(0), _isIterValid(false), _insertMode(false) { }
 
 IOLib::~IOLib() {
-    Deactivate();
-}
-
-void IOLib::Activate() {
-    if(_activated) return;
-    _outputThread = new std::thread(OutputThread(), this);
-    _activated = true;
-}
-
-void IOLib::Deactivate(bool waitForProcessEnd) {
-    if(!_activated) return;
-    _activated = false;
-    DisableAsyncMode(waitForProcessEnd);
-    if(waitForProcessEnd)
-        _outputThread->join();
-    delete _outputThread;
+    DisableAsyncMode();
 }
 
 void IOLib::PrintInputField() {
+    if(!_asyncMode) return;
     std::cout<<_commandPrompt<<_buffor;
     SetCarretToCorrectSpot();
     _isPromptPrinted = true;
 }
 
 void IOLib::DeleteInputField() const {
+    if(!_isPromptPrinted) return;
     std::cout<<'\r';
     for(std::size_t i = 0; i < _buffor.size() + _commandPrompt.size(); i++) std::cout<<' ';
     std::cout<<'\r';
@@ -42,21 +29,16 @@ void IOLib::DeleteInputField() const {
 
 void IOLib::PrintOutput(const std::string &str) {
     if(!_outputEnabled) return;
-    if(_asyncMode)
-        DeleteInputField();
-    std::cout<<str;
-    std::cout<<"\r\n";
-    if(_asyncMode)
-        PrintInputField();
+    DeleteInputField();
+    std::cout<<str<<"\r\n";
+    PrintInputField();
 }
 
 void IOLib::CommadPrint(const std::string &str) { 
     if(!_outputEnabled) return;
-    if(_asyncMode)
-        DeleteInputField();
+    DeleteInputField();
     std::cout<<_commandPrompt<<str<<"\n\r";
-    if(_asyncMode)
-        PrintInputField();
+    PrintInputField();
 }
 
 void IOLib::ShowCarret() {
@@ -120,7 +102,7 @@ void IOLib::HandleSpecialInput(const char &c) {
 }
 
 void IOLib::HandleEvent(const Event &event) {
-    if(event.eventType && !_asyncMode) return;
+    if((event.eventType == INPUT || event.eventType == SPECIAL_INPUT) && !_asyncMode) return;
     switch (event.eventType)
     {
     case SHOW_CARRET:
@@ -144,11 +126,12 @@ void IOLib::HandleEvent(const Event &event) {
 }
 
 void IOLib::OutputThread::operator()(IOLib *io) {
-    while(io->_activated) {
-        if(io->_events.empty()) continue;
-        auto o = io->_events.front();
-        io->_events.pop_front();
-        io->HandleEvent(o);
+    while(io->_asyncMode) {
+        while(io->_events.size()) {
+            auto o = io->_events.front();
+            io->_events.pop_front();
+            io->HandleEvent(o);
+        }
     }
 }
 
@@ -172,6 +155,7 @@ void IOLib::InputThread::operator()(IOLib *io) {
 }
 
 void IOLib::AsyncMode(std::string commandPrompt) {
+    _outputThread = new std::thread(OutputThread(), this);
     _commandPrompt = commandPrompt;
     _buffor = "";
     _carretPos = 0;
@@ -182,10 +166,13 @@ void IOLib::AsyncMode(std::string commandPrompt) {
 void IOLib::DisableAsyncMode(bool waitForProcessEnd) {
     if(!_asyncMode) return;
     _asyncMode = false;
-    if(waitForProcessEnd)
+    if(waitForProcessEnd) {
         _inputThread->join();
-    delete _inputThread;
+        _outputThread->join();
+    }
     DeleteInputField();
+    delete _inputThread;
+    delete _outputThread;
 }
 
 std::size_t IOLib::InputCount() const noexcept {
@@ -215,8 +202,28 @@ std::string IOLib::GetLastInput(bool silent) noexcept {
     return ans;
 }
 
+std::string IOLib::PeekLastInput() const noexcept {
+    if(!InputCount())
+        return "";
+    auto ans = *_inputs.begin();
+    if(_isIterValid) {
+        auto tmpIter = _inputFetchIter;
+        tmpIter++;
+        ans = *tmpIter;
+    }
+    return ans;
+}
+
 bool IOLib::isInAsyncMode() const noexcept {
     return _asyncMode;
+}
+
+void IOLib::EnableOutput() noexcept {
+    _outputEnabled = true;
+}
+
+void IOLib::DisableOutput() noexcept {
+    _outputEnabled = false;
 }
 
 bool IOLib::isOuputEnabled() const noexcept {

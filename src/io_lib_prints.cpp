@@ -1,5 +1,7 @@
 // Author: Igor Zaworski
 #include <iostream>
+#include <iomanip>
+#include <cmath>
 #include "../include/io_lib.h"
 
 template<>
@@ -14,12 +16,26 @@ std::string IOLib::toString(const char* str) {
 
 template<>
 std::string IOLib::toString(const double str) {
-    return std::to_string(str);
+    std::ostringstream ss;
+    const auto x = pow(10, decimalPrecision);
+    ss<<std::fixed<<std::setprecision(decimalPrecision)<<round(str*x)/x;
+    return ss.str();
+}
+
+template<>
+std::string IOLib::toString(const long double str) {
+    std::ostringstream ss;
+    const auto x = pow(10, decimalPrecision);
+    ss<<std::fixed<<std::setprecision(decimalPrecision)<<round(str*x)/x;
+    return ss.str();
 }
 
 template<>
 std::string IOLib::toString(const float str) {
-    return std::to_string(str);
+    std::ostringstream ss;
+    const auto x = pow(10, decimalPrecision);
+    ss<<std::fixed<<std::setprecision(decimalPrecision)<<round(str*x)/x;
+    return ss.str();
 }
 
 template<>

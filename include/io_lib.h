@@ -12,7 +12,6 @@ typedef std::vector<PrintOptions> PrintOptionList;
 
 class IOLib {
     private:
-        bool _activated;
         std::string _buffor;
         std::string _bufforTmp;
         std::string _commandPrompt;
@@ -84,17 +83,9 @@ class IOLib {
         void InputRightArrowHandler();
         void InputLeftArrowHandler();
     public:
+        static unsigned short decimalPrecision;
         IOLib();
         ~IOLib();
-        /**
-         * Allows io to be used
-        */
-        void Activate();
-        /**
-         * Disables io if Async is enabled is is also diasable
-         * @param waitForProcessEnd
-        */
-        void Deactivate(bool = true);
         /**
          * Turns on asynchronous input
          * @param CommandPrompt default: "> "
@@ -114,6 +105,7 @@ class IOLib {
          * @param silent if input should be printed during fetching
         */
         std::string GetLastInput(bool = false) noexcept;
+        std::string PeekLastInput() const noexcept;
         bool isInAsyncMode() const noexcept;
         void setCommandPrompt(const std::string) noexcept;
         std::string getCommandPrompt() const noexcept;
@@ -131,6 +123,8 @@ class IOLib {
             return output;
         }
 
+        void EnableOutput() noexcept;
+        void DisableOutput() noexcept;
         bool isOuputEnabled() const noexcept;
 
         template <typename T>
@@ -141,20 +135,37 @@ class IOLib {
         // std::string toString(T<Y, U>);
 
         /**
+         * Prints str (in async mode works same as Println)
+         * @param str value to print
+         * @param options options of printing
+        */
+        template <typename T = std::string>
+        inline void Print(T str = "", const PrintOptionList args = {}) {
+            if(_asyncMode)
+                _events.push_back({
+                    str: CombineStr(str, args),
+                });
+            else
+                std::cout<<CombineStr(str, args);
+        }
+
+        /**
          * Prints str and goes to new line
          * @param str value to print
          * @param options options of printing
         */
         template <typename T = std::string>
         inline void Println(T str = "", const PrintOptionList args = {}) {
-            _events.push_back({
-                str: CombineStr(str, args),
-            });
+            if(_asyncMode)
+                _events.push_back({
+                    str: CombineStr(str, args),
+                });
+            else
+                std::cout<<CombineStr(str, args)<<"\n\r";
         }
 };
 
 #ifndef IO_LIB_NO_GLOBAL_IO
-    #define IO_LIB_GLOBAL_IO
     extern IOLib io;
 #endif
 
