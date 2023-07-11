@@ -78,7 +78,7 @@ Library for handling simple async input/output
 
 #### Colors:
 - BLACK
-- aRED
+- RED
 - GREEN
 - YELLOW
 - BLUE
