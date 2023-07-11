@@ -77,24 +77,26 @@ Library for handling simple async input/output
 ``<COLOR>_B`` - changes background color
 
 #### Colors:
-- BLACK
-- RED
-- GREEN
-- YELLOW
-- BLUE
-- MAGENTA
-- CYAN
-- WHITE
-- GREY
-- BRIGHT_RED
-- BRIGHT_GREEN
-- BRIGHT_YELLOW
-- BRIGHT_BLUE
-- BRIGHT_MAGENTA
-- BRIGHT_CYAN
-- BRIGHT_WHITE
+
+- `BLACK`
+- `RED`
+- `GREEN`
+- `YELLOW`
+- `BLUE`
+- `MAGENTA`
+- `CYAN`
+- `WHITE`
+- `GREY`
+- `BRIGHT_RED`
+- `BRIGHT_GREEN`
+- `BRIGHT_YELLOW`
+- `BRIGHT_BLUE`
+- `BRIGHT_MAGENTA`
+- `BRIGHT_CYAN`
+- `BRIGHT_WHITE`
 
 ### Example
+
 ```
 #include <iostream>
 #include <chrono>   //For Get Millis
