@@ -4,10 +4,9 @@
 
 IOLib io;
 
-unsigned short IOLib::decimalPrecision = 2;
-
-IOLib::IOLib() : _buffor(""), _bufforTmp(""), _commandPrompt(""), _asyncMode(false), _isPromptPrinted(false), _outputEnabled(true), _carretPos(0),
-    _inputHistorySize(-1), _inputFetched(0), _isIterValid(false), _insertMode(false) { }
+IOLib::IOLib() : _buffor(""), _bufforTmp(""), _commandPrompt(""), _asyncMode(false), 
+    _isPromptPrinted(false), _outputEnabled(true), _carretPos(0), _inputFetched(0),
+    _isIterValid(false), _insertMode(false), decimalPrecision(2), inputHistorySize(SIZE_MAX) { }
 
 IOLib::~IOLib() {
     DisableAsyncMode();
@@ -251,7 +250,7 @@ void IOLib::SwapBufforTo(const std::string newBuffor) {
 }
 
 void IOLib::InputEnterHandler() {
-    if(_inputs.size() == _inputHistorySize) {
+    if(_inputs.size() == inputHistorySize) {
         _isIterValid = !(!_isIterValid || _inputs.begin() == _inputFetchIter);
         _inputs.pop_front();
     }

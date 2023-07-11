@@ -20,7 +20,6 @@ class IOLib {
         bool _outputEnabled;
         std::size_t _carretPos;
         std::list<std::string> _inputs;
-        std::size_t _inputHistorySize;
         std::size_t _inputFetched;
         bool _isIterValid;
         std::list<std::string>::iterator _inputFetchIter;
@@ -91,7 +90,9 @@ class IOLib {
         // void UpdateTargetBuffor(const char&, const EventType&);
         // void InputTargetEnterHandler();
     public:
-        static unsigned short decimalPrecision;
+        unsigned short decimalPrecision;
+        std::size_t inputHistorySize;
+        
         IOLib();
         ~IOLib();
         /**
@@ -119,7 +120,7 @@ class IOLib {
         std::string getCommandPrompt() const noexcept;
 
         template <typename T>
-        inline static std::string CombineStr(T str, const PrintOptionList args = {}) {
+        inline std::string CombineStr(T str, const PrintOptionList args = {}) {
             std::string output = "";
             if(args.size()) {
                 output = "\033[";
@@ -136,11 +137,11 @@ class IOLib {
         bool isOuputEnabled() const noexcept;
 
         template <typename T>
-        static std::string toString(T);
+        std::string toString(T);
         // template <typename Y, template <typename> class T>
-        // static std::string toString(T<Y>);
+        // std::string toString(T<Y>);
         // template <typename Y, typename U, template <typename, typename> class T>
-        // static std::string toString(T<Y, U>);
+        // std::string toString(T<Y, U>);
 
         /**
          * Prints str (in async mode works same as Println)
@@ -175,8 +176,8 @@ class IOLib {
 
 #ifndef IO_LIB_NO_GLOBAL_IO
     extern IOLib io;
+    #define p io.CombineStr
 #endif
 
-#define p IOLib::CombineStr
 
 #endif
