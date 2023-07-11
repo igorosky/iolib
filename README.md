@@ -26,9 +26,15 @@ Library for handling simple async input/output
 
 ``std::size_t TotalInputCount()`` - returns total count of stored inputs ()
 
+``std::vector<std::string> ParseInput(std::string)`` - parses string into vector (`ab cde ef` into [`ab`, `cde`, `ef`] and `ab "cde ef"` into [`ab`, `cde ef`])
+
 ``std::string GetLastInput(bool silent = false)`` - fetch oldest unfetched input. If silent there is no information about it printed. Returns empty string when nothing to fetch
 
+``std::vector<std::string> GetLastInputAndParse(bool silent = false)`` - same as above but additionaly parses input
+
 ``std::string PeekLastInput()`` - returns std::string which is be next to fetch (without actually fetching it)
+
+``std::vector<std::string> PeekLastInputAndParse()`` - same as above but additionaly parses input
 
 ``bool isInAsyncMode()`` - returns if io is in async mode
 
