@@ -126,22 +126,31 @@ using namespace std;
 int main(int argc, char const *argv[]) {
     io.AsyncMode("-> "); // Turn on async mode with "-> " as command prompt
     io.Println(p("Hello", {RED_B, BOLD, UNDERLINE}) + " " + p("World", {GREEN_B, YELLOW_F, BOLD})); // Colorful Hello World
-    io.Println(p(1.305)); // Print double rounded to two decimal places
+    io.Println(p(1.305)); // Prints double rounded to two decimal places
     io.decimalPrecision = 3; // Set decimal precision to three decimal places
-    io.Println(p(1.3)); // Print 1.300
+    io.Println(p(1.3)); // Prints 1.300
     bool loop = true;
     while(loop) {
-        // Print Every two seconds and example of that Print beahave the same as Println in async mode
+        // Prints Every two seconds and example of that Print beahave the same as Println in async mode
         io.Print("Hello World", {RED_F, GREEN_B});
         io.Println("Have a nice day", {RED_F, GREEN_B});
         auto x = GetMillis() + 2000; // 2s delay
         while(x > GetMillis()) {
             if(!io.InputCount()) continue;
-            // exit program on exit
+            // exits program on `exit`
             if(io.PeekLastInput() == "exit") {
                 io.Println(io.PeekLastInput() + " :-)");
                 (void)io.GetLastInput(true); // Fetch in silence so there will be nothing left after pressing enter
                 return 0;
+            }
+            else if(io.PeekLastInputAndParse()[0] == "im") { // Parsing command (type: `im johnny`, or try: `im "johnny smith"`)
+                const auto parsedInput = io.GetLastInputAndParse();
+                if(parsedInput.size() < 2) {
+                    io.Println("No name specified", {BOLD, RED_F});
+                    continue;
+                }
+                io.Println("Hello " + p(parsedInput[1], {BOLD, BLUE_F}));
+                continue;
             }
             string str = io.GetLastInput();
             if(str == "stop") {
@@ -149,10 +158,8 @@ int main(int argc, char const *argv[]) {
                 break;
             }
             // Change command prompt
-            else if(str == "loonger") {
-                (void)io.GetLastInput(false);
+            else if(str == "loonger")
                 io.setCommandPrompt("-" + io.getCommandPrompt());
-            }
             else
                 io.Println("Unknown command", {BOLD, RED_F});
         }

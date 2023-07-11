@@ -182,7 +182,7 @@ std::size_t IOLib::TotalInputCount() const noexcept {
     return _inputs.size();
 }
 
-std::string IOLib::GetLastInput(bool silent) noexcept {
+std::string IOLib::GetLastInput(const bool silent) noexcept {
     if(!InputCount())
         return "";
     if(!_isIterValid) {
@@ -324,4 +324,37 @@ void IOLib::InputRightArrowHandler() {
 void IOLib::InputLeftArrowHandler() {
     _carretPos--;
     std::cout<<'\b';
+}
+
+std::vector<std::string> IOLib::ParseInput(std::string str) {
+    std::vector<std::string> ans = { "" };
+    bool inQuote = false;
+    for(std::size_t i = 0; i < str.size(); i++) {
+        switch(str[i]) {
+        case '"':
+            inQuote = !inQuote;
+            break;
+        case ' ':
+            if(inQuote)
+                ans.back().push_back(' ');
+            else
+                ans.push_back("");
+            break;
+        case '\\':
+            if(i + 1 < str.size() && str[i + 1] == '"')
+                i++;
+        default:
+            ans.back().push_back(str[i]);
+            break;
+        }
+    }
+    return ans;
+}
+
+std::vector<std::string> IOLib::GetLastInputAndParse(const bool silent) {
+    return ParseInput(GetLastInput(silent));
+}
+
+std::vector<std::string> IOLib::PeekLastInputAndParse() const {
+    return ParseInput(PeekLastInput());
 }

@@ -114,7 +114,9 @@ class IOLib {
          * @param silent if input should be printed during fetching
         */
         std::string GetLastInput(bool = false) noexcept;
+        std::vector<std::string> GetLastInputAndParse(bool = false);
         std::string PeekLastInput() const noexcept;
+        std::vector<std::string> PeekLastInputAndParse() const;
         bool isInAsyncMode() const noexcept;
         void setCommandPrompt(const std::string) noexcept;
         std::string getCommandPrompt() const noexcept;
@@ -172,6 +174,8 @@ class IOLib {
             else
                 std::cout<<CombineStr(str, args)<<"\n\r";
         }
+
+        static std::vector<std::string> ParseInput(std::string);
 };
 
 #ifndef IO_LIB_NO_GLOBAL_IO
