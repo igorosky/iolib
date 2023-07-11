@@ -140,7 +140,7 @@ class IOLib {
         // template <typename Y, template <typename> class T>
         // static std::string toString(T<Y>);
         // template <typename Y, typename U, template <typename, typename> class T>
-        // std::string toString(T<Y, U>);
+        // static std::string toString(T<Y, U>);
 
         /**
          * Prints str (in async mode works same as Println)
