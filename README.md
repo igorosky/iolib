@@ -42,7 +42,7 @@ Library for handling simple async input/output
 
 ``std::string getCommandPrompt()`` - returns current command prompt
 
-``std::string CombineStr(T str, const PrintOptionList args = {})`` - returns string with applied PrintOptions. Macro `p` e.g. ``p("Hello", {RED_F})``
+``std::string CombineStr(T str, const PrintOptionList args = {})`` - returns string with applied PrintOptions. Macro `cs` e.g. ``cs("Hello", {RED_F})``
 
 ``void EnableOutput()`` - enables output
 
@@ -133,10 +133,10 @@ using namespace std;
 
 int main(int argc, char const *argv[]) {
     io.AsyncMode("-> "); // Turn on async mode with "-> " as command prompt
-    io.Println(p("Hello", {RED_B, BOLD, UNDERLINE}) + " " + p("World", {GREEN_B, YELLOW_F, BOLD})); // Colorful Hello World
-    io.Println(p(1.305)); // Prints double rounded to two decimal places
+    io.Println(cs("Hello", {RED_B, BOLD, UNDERLINE}) + " " + cs("World", {GREEN_B, YELLOW_F, BOLD})); // Colorful Hello World
+    io.Println(cs(1.305)); // Prints double rounded to two decimal places
     io.decimalPrecision = 3; // Set decimal precision to three decimal places
-    io.Println(p(1.3)); // Prints 1.300
+    io.Println(cs(1.3)); // Prints 1.300
     bool loop = true;
     while(loop) {
         // Prints Every two seconds and example of that Print beahave the same as Println in async mode
@@ -157,7 +157,7 @@ int main(int argc, char const *argv[]) {
                     io.Println("No name specified", {BOLD, RED_F});
                     continue;
                 }
-                io.Println("Hello " + p(parsedInput[1], {BOLD, BLUE_F}));
+                io.Println("Hello " + cs(parsedInput[1], {BOLD, BLUE_F}));
                 continue;
             }
             string str = io.GetLastInput();
@@ -177,7 +177,7 @@ int main(int argc, char const *argv[]) {
     io.Print('!'); // Print works as it should in non-async mode
     io.Println(); // Go to new line
     vector<int> coolVector = {1,2,3,4};
-    io.Println(p(coolVector)); // Use of custom template for vectors
+    io.Println(cs(coolVector)); // Use of custom template for vectors
     return 0;
 }
 ```

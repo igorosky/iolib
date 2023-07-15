@@ -180,7 +180,7 @@ class IOLib {
 
 #ifndef IO_LIB_NO_GLOBAL_IO
     extern IOLib io;
-    #define p io.CombineStr
+    #define cs io.CombineStr
 #endif
 
 
